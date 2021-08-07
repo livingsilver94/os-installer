@@ -1,6 +1,7 @@
 # -*- coding: utf-8; Mode: Python; indent-tabs-mode: nil; tab-width: 4 -*-
 
 # Copyright (C) 2006, 2007 Canonical Ltd.
+# Copyright (C) 2008-2021 Solus <copyright@getsol.us>.
 # Written by Colin Watson <cjwatson@ubuntu.com>.
 #
 # This program is free software; you can redistribute it and/or modify
@@ -17,15 +18,13 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-from __future__ import print_function
 
 import datetime
 import hashlib
+import logging
 import os
-import sys
 import time
 import xml.dom.minidom
-
 
 TZ_DATA_FILE = '/usr/share/zoneinfo/zone.tab'
 ISO_3166_FILE = '/usr/share/xml/iso-codes/iso_3166.xml'
@@ -230,7 +229,7 @@ class _Database(object):
         # one with the same md5sum and make a reference to it
         try:
             return self.tz_to_loc[tz]
-        except:
+        except Exception:
             try:
                 zone_path = os.path.join('/usr/share/zoneinfo', tz)
                 with open(zone_path, 'rb') as tz_file:
@@ -244,7 +243,7 @@ class _Database(object):
                 pass
 
             # If not found, oh well, just warn and move on.
-            print('Could not understand timezone', tz, file=sys.stderr)
+            logging.warning('Could not understand timezone %s', tz)
             self.tz_to_loc[tz] = None  # save it for the future
             return None
 

@@ -1,9 +1,6 @@
-#!/bin/true
-# -*- coding: utf-8 -*-
-#
 #  This file is part of os-installer
 #
-#  Copyright 2013-2020 Solus <copyright@getsol.us>
+#  Copyright 2013-2021 Solus <copyright@getsol.us>.
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -11,37 +8,35 @@
 #  (at your option) any later version.
 #
 
-from .basepage import BasePage
-from gi.repository import Gtk, GLib, Pango
+import logging
+import os
+import shutil
+import stat
+import sys
 import threading
 import time
 from collections import OrderedDict
-from os_installer2 import SOURCE_FILESYSTEM, INNER_FILESYSTEM
-from os_installer2.diskops import DiskOpCreateDisk, DiskOpResizeOS
-from os_installer2.diskops import DiskOpCreatePartition
-from os_installer2.diskops import DiskOpCreateESP
-from os_installer2.diskops import DiskOpCreateLogicalVolume
-from os_installer2.diskops import DiskOpCreateVolumeGroup
-from os_installer2.diskops import DiskOpFormatRootLate
-from os_installer2.diskops import DiskOpFormatSwapLate
-from os_installer2.postinstall import PostInstallVfs
-from os_installer2.postinstall import PostInstallRemoveLiveConfig
-from os_installer2.postinstall import PostInstallSyncFilesystems
-from os_installer2.postinstall import PostInstallMachineID
-from os_installer2.postinstall import PostInstallKeyboard
-from os_installer2.postinstall import PostInstallLocale
-from os_installer2.postinstall import PostInstallTimezone
-from os_installer2.postinstall import PostInstallUsers
-from os_installer2.postinstall import PostInstallHostname
-from os_installer2.postinstall import PostInstallDiskOptimize
-from os_installer2.postinstall import PostInstallFstab
-from os_installer2.postinstall import PostInstallUsysconf
-from os_installer2.postinstall import PostInstallBootloader
-import os
-import stat
+
 import parted
-import sys
-import shutil
+from gi.repository import GLib, Gtk, Pango
+from os_installer2 import INNER_FILESYSTEM, SOURCE_FILESYSTEM
+from os_installer2.diskops import (DiskOpCreateDisk, DiskOpCreateESP,
+                                   DiskOpCreateLogicalVolume,
+                                   DiskOpCreatePartition,
+                                   DiskOpCreateVolumeGroup,
+                                   DiskOpFormatRootLate, DiskOpFormatSwapLate,
+                                   DiskOpResizeOS)
+from os_installer2.postinstall import (PostInstallBootloader,
+                                       PostInstallDiskOptimize,
+                                       PostInstallFstab, PostInstallHostname,
+                                       PostInstallKeyboard, PostInstallLocale,
+                                       PostInstallMachineID,
+                                       PostInstallRemoveLiveConfig,
+                                       PostInstallSyncFilesystems,
+                                       PostInstallTimezone, PostInstallUsers,
+                                       PostInstallUsysconf, PostInstallVfs)
+
+from .basepage import BasePage
 
 # Update 5 times a second, vs every byte copied..
 UPDATE_FREQUENCY = 1000 / 5
@@ -184,7 +179,7 @@ class InstallerProgressPage(BasePage):
             self.progressbar.pulse()
 
         if not self.installing:
-            print("Finished idle_monitor")
+            logging.info("Finished idle_monitor")
             GLib.idle_add(self.finish_installer)
         return self.installing
 
@@ -214,7 +209,7 @@ class InstallerProgressPage(BasePage):
         if len(self.error_msgs) > 0:
             self.emit_errors()
         else:
-            print("Successful install!")
+            logging.info("Successful install!")
             self.info.owner.skip_page()
         return False
 
@@ -311,8 +306,7 @@ class InstallerProgressPage(BasePage):
         self.set_display_string("Unmounting filesystems - might take a while")
 
         # Visit in reverse order
-        keys = self.mount_tracker.keys()
-        keys.reverse()
+        keys = reversed(self.mount_tracker.keys())
         for key in keys:
             if not self.dm.do_umount(self.mount_tracker[key]):
                 self.set_error_message("Cannot umount {}".format(key))
@@ -366,7 +360,7 @@ class InstallerProgressPage(BasePage):
 
     def copy_system(self):
         """ Attempt to copy the entire filesystem across """
-        print("Need to copy {} bytes".format(self.filesystem_source_size))
+        logging.debug("Need to copy %s bytes", self.filesystem_source_size)
 
         source_fs = self.get_mount_point_for(INNER_FILESYSTEM)
         if not source_fs:
@@ -597,7 +591,7 @@ class InstallerProgressPage(BasePage):
             if not op.apply_format(disk):
                 e = op.get_errors()
                 self.set_error_message("Failed to apply format: {}".format(e))
-                print(op.describe())
+                logging.error(op.describe())
                 return False
 
         return True
@@ -619,7 +613,7 @@ class InstallerProgressPage(BasePage):
             return False
         self.mount_tracker[root] = target
 
-        print("DEBUG: / ({}) mounted at {}".format(root, target))
+        logging.debug("/ (%s) mounted at %s", root, target)
         return True
 
     def maybe_nuke_live(self):
@@ -645,7 +639,7 @@ class InstallerProgressPage(BasePage):
             return False
         self.mount_tracker[home] = target
 
-        print("DEBUG: /home ({}) mounted at {}".format(home, target))
+        logging.debug("/home (%s) mounted at %s", home, target)
         return True
 
     def maybe_mount_boot(self):
@@ -658,14 +652,14 @@ class InstallerProgressPage(BasePage):
         if not os.path.exists(target):
             try:
                 os.makedirs(target, mode=0o755)
-            except:
+            except Exception:
                 return False
         if not self.dm.do_mount(boot, target, "auto", "rw"):
             self.set_error_message("Cannot mount boot partition")
             return False
         self.mount_tracker[boot] = target
 
-        print("DEBUG: /boot ({}) mounted at {}".format(boot, target))
+        logging.debug("/boot (%s)) mounted at %s", boot, target)
         return True
 
     def install_thread(self):
@@ -677,14 +671,14 @@ class InstallerProgressPage(BasePage):
 
         # Simulate!
         self.set_display_string("Simulating disk operations")
-        print("SIMULATING")
+        logging.debug("SIMULATING")
         if not self.apply_disk_strategy(True):
             self.installing = False
             self.set_error_message("Failed to simulate disk strategy")
             return False
 
         self.past_simulation = True
-        print("NO LONGER SIMULATING")
+        logging.debug("NO LONGER SIMULATING")
         # Now do it for real.
         if not self.apply_disk_strategy(False):
             self.installing = False

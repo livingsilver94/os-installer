@@ -1,9 +1,6 @@
-#!/bin/true
-# -*- coding: utf-8 -*-
-#
 #  This file is part of os-installer
 #
-#  Copyright 2013-2020 Solus <copyright@getsol.us>
+#  Copyright 2013-2021 Solus <copyright@getsol.us>.
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -11,6 +8,7 @@
 #  (at your option) any later version.
 #
 
+import logging
 import os
 import pwd
 
@@ -30,7 +28,7 @@ class PermissionsManager:
                 self.down_gid = uid
                 self.set_details()
             except Exception as e:
-                print("Defaulting on fallback UID: {}".format(e))
+                logging.warning("Defaulting on fallback UID: %s", e)
             return
         if "SUDO_UID" in os.environ:
             id_ = os.environ["SUDO_UID"]
@@ -40,7 +38,7 @@ class PermissionsManager:
                 self.down_gid = uid
                 self.set_details()
             except Exception as e:
-                print("Defaulting on fallback UID: {}".format(e))
+                logging.warning("Defaulting on fallback UID: %s", e)
 
     def set_details(self):
         pw = pwd.getpwuid(self.down_uid)
@@ -56,7 +54,7 @@ class PermissionsManager:
             os.setresuid(self.down_uid, self.down_uid, 0)
             os.environ['HOME'] = self.home_dir
         except Exception as e:
-            print("Failed to drop permissions: {}".format(e))
+            logging.error("Cannot drop permissions: %s", e)
             return False
         return True
 
@@ -67,6 +65,6 @@ class PermissionsManager:
             os.setresgid(0, 0, 0)
             os.environ['HOME'] = '/root'
         except Exception as e:
-            print("Failed to raise permissions: {}".format(e))
+            logging.error("Cannot raise permissions: %s", e)
             return False
         return True

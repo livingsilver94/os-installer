@@ -1,9 +1,6 @@
-#!/bin/true
-# -*- coding: utf-8 -*-
-#
 #  This file is part of os-installer
 #
-#  Copyright 2013-2020 Solus <copyright@getsol.us>
+#  Copyright 2013-2021 Solus <copyright@getsol.us>.
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -11,11 +8,13 @@
 #  (at your option) any later version.
 #
 
-from .basepage import BasePage
-from gi.repository import Gdk, Gtk, GLib
+import threading
+
+from gi.repository import Gdk, GLib, Gtk
 from os_installer2.diskman import DriveProber
 from os_installer2.strategy import DiskStrategyManager
-import threading
+
+from .basepage import BasePage
 
 
 class BrokenWindowsPage(Gtk.Box):
@@ -183,7 +182,7 @@ class LoadingPage(Gtk.Box):
         self.spinner = Gtk.Spinner()
         self.pack_start(self.spinner, False, False, 10)
 
-        self.label = Gtk.Label("Examining local storage devices" + u"…")
+        self.label = Gtk.Label("Examining local storage devices…")
         self.pack_start(self.label, False, False, 10)
 
         self.set_valign(Gtk.Align.CENTER)

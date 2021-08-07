@@ -1,9 +1,6 @@
-#!/bin/true
-# -*- coding: utf-8 -*-
-#
 #  This file is part of os-installer
 #
-#  Copyright 2013-2020 Solus <copyright@getsol.us>
+#  Copyright 2013-2021 Solus <copyright@getsol.us>.
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -11,15 +8,16 @@
 #  (at your option) any later version.
 #
 
-import subprocess
+import logging
 import os
-from collections import OrderedDict
-from .diskman import DiskManager
-from .diskops import DiskOpCreateSwap, DiskOpUseSwap, DiskOpUseHome
-from .diskops import DiskOpCreateBoot
-from .diskops import DiskOpCreateLUKSContainer
-from .strategy import EmptyDiskStrategy
 import shutil
+import subprocess
+from collections import OrderedDict
+
+from .diskman import DiskManager
+from .diskops import (DiskOpCreateBoot, DiskOpCreateLUKSContainer,
+                      DiskOpCreateSwap, DiskOpUseHome, DiskOpUseSwap)
+from .strategy import EmptyDiskStrategy
 
 
 def get_part_uuid(path, part_uuid=False):
@@ -27,12 +25,12 @@ def get_part_uuid(path, part_uuid=False):
     col = "PARTUUID" if part_uuid else "UUID"
     cmd = "blkid -s {} -o value {}".format(col, path)
     try:
-        o = subprocess.check_output(cmd, shell=True)
+        o = subprocess.check_output(cmd, shell=True, encoding="utf-8")
         o = o.split("\n")[0]
         o = o.replace("\r", "").replace("\n", "").strip()
         return o
     except Exception as e:
-        print("UUID lookup failed: {}".format(e))
+        logging.error("UUID lookup failed: %s", e)
         return None
 
 
@@ -54,11 +52,12 @@ class PostInstallStep:
 
     def apply(self):
         """ Apply this post-install step """
-        print("NOT IMPLEMENTED!")
-        return False
+        logging.error("NOT IMPLEMENTED!")
+        raise NotImplementedError()
 
     def get_display_string(self):
-        return "I AM NOT IMPLEMENTED!"
+        logging.error("NOT IMPLEMENTED!")
+        raise NotImplementedError()
 
     def set_errors(self, err):
         """ Set the errors for this step """
@@ -382,7 +381,7 @@ class PostInstallTimezone(PostInstallStep):
                 os.chmod(adjp, 0o0644)
                 adjtime.write(ADJTIME_LOCAL.strip() + "\n")
         except Exception as e:
-            print("Warning: Failed to update adjtime: {}".format(e))
+            logging.warning("Failed to update adjtime: %s", e)
         return True
 
 
@@ -714,7 +713,7 @@ class PostInstallBootloader(PostInstallStep):
         if self.swap_uuid is not None:
             if not os.path.exists(kdir):
                 try:
-                    os.makedirs(kdir, 00755)
+                    os.makedirs(kdir, 0o0755)
                     with open(kresumefile, "w") as kfile_output:
                         swap = "resume=UUID={}".format(self.swap_uuid)
                         kfile_output.write(swap)
@@ -774,7 +773,7 @@ class PostInstallBootloader(PostInstallStep):
                 subprocess.check_call(cmd, shell=True)
                 updated_uefi = True
                 break
-            except:
+            except Exception:
                 pass
 
         if not updated_uefi:
@@ -792,7 +791,7 @@ class PostInstallBootloader(PostInstallStep):
                 if i2 == child:
                     return os.path.join(root, i)
         except Exception as ex:
-            print("Error obtaining {} dir: {}".format(child, ex))
+            logging.error("Cannot obtain %s dir: %s", child, ex)
         return t1
 
     def get_efi_dir(self, base):

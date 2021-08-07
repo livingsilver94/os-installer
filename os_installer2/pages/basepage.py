@@ -1,9 +1,6 @@
-#!/bin/true
-# -*- coding: utf-8 -*-
-#
 #  This file is part of os-installer
 #
-#  Copyright 2013-2020 Solus <copyright@getsol.us>
+#  Copyright 2013-2021 Solus <copyright@getsol.us>.
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -20,7 +17,7 @@ class BasePage(Gtk.Box):
     def __init__(self):
         Gtk.Box.__init__(self, orientation=Gtk.Orientation.VERTICAL, spacing=0)
 
-        mk = u"<span font-size='x-large'>{}</span>".format(self.get_title())
+        mk = f"<span font-size='x-large'>{self.get_title()}</span>"
         lab = Gtk.Label.new(mk)
         lab.set_property("margin-top", 10)
         lab.set_property("margin-start", 20)

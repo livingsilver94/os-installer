@@ -1,9 +1,6 @@
-#!/bin/true
-# -*- coding: utf-8 -*-
-#
 #  This file is part of os-installer
 #
-#  Copyright 2013-2020 Solus <copyright@getsol.us>
+#  Copyright 2013-2021 Solus <copyright@getsol.us>.
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -11,9 +8,12 @@
 #  (at your option) any later version.
 #
 
-from .basepage import BasePage
-from gi.repository import Gtk, GnomeDesktop
+import logging
 import subprocess
+
+from gi.repository import GnomeDesktop, Gtk
+
+from .basepage import BasePage
 
 
 class KbLabel(Gtk.Box):
@@ -111,9 +111,9 @@ class InstallerKeyboardPage(BasePage):
         self.info.keyboard = child.kb
         self.info.keyboard_sz = child.dname
         try:
-            subprocess.check_call("setxkbmap {} {}".format(child.layout,child.variant), shell=True)
+            subprocess.check_call("setxkbmap {} {}".format(child.layout, child.variant), shell=True)
         except Exception as e:
-            print("@ERR@: Couldn\'t set the keyboard layout: {}".format(e))
+            logging.error("Couldn't set the keyboard layout: %s", e)
 
         self.info.owner.set_can_next(True)
 
@@ -160,7 +160,7 @@ class InstallerKeyboardPage(BasePage):
             layouts.append(widget)
 
         c = country.lower()
-        native = filter(lambda x: x.country.lower() == c, layouts)
+        native = [x for x in layouts if x.country.lower() == c]
 
         primary = None
 

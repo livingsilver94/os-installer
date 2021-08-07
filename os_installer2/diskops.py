@@ -1,9 +1,6 @@
-#!/bin/true
-# -*- coding: utf-8 -*-
-#
 #  This file is part of os-installer
 #
-#  Copyright 2013-2020 Solus <copyright@getsol.us>
+#  Copyright 2013-2021 Solus <copyright@getsol.us>.
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -11,10 +8,13 @@
 #  (at your option) any later version.
 #
 
-from os_installer2 import format_size_local
-import parted
+import logging
 import subprocess
 import tempfile
+
+import parted
+
+from os_installer2 import format_size_local
 
 
 class DummyPart:
@@ -44,8 +44,8 @@ class BaseDiskOp:
 
     def apply(self, disk, simulate):
         """ Apply this operation on the given (optional) disk"""
-        print("IMPLEMENT ME!")
-        return False
+        logging.error("NOT IMPLEMENTED!")
+        raise NotImplementedError()
 
     def get_errors(self):
         """ Get the errors, if any, encountered """
@@ -76,6 +76,9 @@ class DiskOpCreateDisk(BaseDiskOp):
 
     def apply(self, unused_disk, simulate):
         """ Construct a new labeled disk """
+        # the "simulate" flag here is ignored.
+        # All this method does is returning a Disk object, so there is
+        # no difference between a simulation and a real operation.
         try:
             d = parted.freshDisk(self.device, self.label)
             self.disk = d
@@ -129,11 +132,9 @@ class DiskOpCreatePartition(BaseDiskOp):
         try:
             if not disk:
                 raise RuntimeError("Cannot create partition on empty disk!")
-            length = parted.sizeToSectors(
-                self.size, 'B', disk.device.sectorSize)
+            length = parted.sizeToSectors(self.size, 'B', disk.device.sectorSize)
             block_length = parted.sizeToSectors(1, 'MiB', disk.device.sectorSize)
-            geom = parted.Geometry(
-                device=self.device, start=self.part_offset, length=length)
+            geom = parted.Geometry(device=self.device, start=self.part_offset, length=length)
 
             # extend the length to align.  Not necessary but doesnt waste a couple mbs
             geom.length = self.calc_length(self.part_offset, length, block_length)
@@ -152,8 +153,8 @@ class DiskOpCreatePartition(BaseDiskOp):
             p = parted.Partition(
                 disk=disk, type=self.ptype, fs=fs, geometry=geom)
 
-            disk.addPartition(
-                p,  parted.Constraint(device=self.device))
+            if not simulate:
+                disk.addPartition(p,  parted.Constraint(device=self.device))
             self.part = p
             self.part_end = self.part_offset + length
         except Exception as e:
@@ -334,7 +335,7 @@ class DiskOpCreateLUKSContainer(DiskOpCreatePartition):
             mdir = tempfile.mkdtemp(suffix=suffix)
             return mdir
         except Exception as e:
-            print("Error constructing temp directory: {}".format(e))
+            logging.error("Failed constructing temp directory: %s", e)
             return None
 
     def apply_format(self, disk):
@@ -398,7 +399,7 @@ class DiskOpCreatePhysicalVolume(DiskOpCreatePartition):
             format_size_local(self.size, True), self.device.path)
 
     def apply_format(self, disk):
-        cmd = "/sbin/pvcreate -ff -y {}".format(self.part.path)
+        cmd = f"/sbin/pvcreate -ff -y {self.part.path}"
         try:
             subprocess.check_call(cmd, shell=True)
         except Exception as e:
@@ -435,7 +436,7 @@ class DiskOpCreateLUKSPhysicalVolume(BaseDiskOp):
 
     def apply_format(self, disk):
         fpath = self.luks_op.mapper_name
-        cmd = "/sbin/pvcreate -ff -y {}".format(fpath)
+        cmd = f"/sbin/pvcreate -ff -y {fpath}"
         try:
             subprocess.check_call(cmd, shell=True)
         except Exception as e:
@@ -648,7 +649,7 @@ class DiskOpResizeOS(BaseDiskOp):
                 try:
                     subprocess.check_call(cmd1, shell=True)
                 except Exception as ex:
-                    print(ex)
+                    logging.error("Disk ops apply: %s", ex)
                     self.set_errors(ex)
                     return False
 
@@ -658,7 +659,7 @@ class DiskOpResizeOS(BaseDiskOp):
                 try:
                     subprocess.check_call(cmd, shell=True)
                 except Exception as ex:
-                    print(ex)
+                    logging.error("Disk ops apply: %s", ex)
                     self.set_errors(ex)
                     return False
 

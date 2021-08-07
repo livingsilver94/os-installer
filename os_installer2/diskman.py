@@ -1,9 +1,6 @@
-#!/bin/true
-# -*- coding: utf-8 -*-
-#
 #  This file is part of os-installer
 #
-#  Copyright 2013-2020 Solus <copyright@getsol.us>
+#  Copyright 2013-2021 Solus <copyright@getsol.us>.
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -11,16 +8,18 @@
 #  (at your option) any later version.
 #
 
-from . import format_size_local
-from . import MIN_REQUIRED_SIZE
-from gi.repository import GObject
-import re
+import logging
 import os
+import re
+import struct
 import subprocess
 import tempfile
 import time
+
 import parted
-import struct
+from gi.repository import GObject
+
+from . import MIN_REQUIRED_SIZE, format_size_local
 
 
 class DriveProber:
@@ -47,7 +46,7 @@ class DriveProber:
             try:
                 subprocess.check_call(cmd)
             except Exception as e:
-                print("Failed to execute {}: {}".format(cmd, e))
+                logging.error("Failed to execute %s: %s", cmd, e)
                 return False
         return True
 
@@ -76,20 +75,19 @@ class DriveProber:
             try:
                 device = parted.getDevice(item)
                 if device.readOnly:
-                    print("DEBUG: Skipping read-only device")
+                    logging.debug("Skipping read-only device")
                     continue
                 size = device.getLength() * device.sectorSize
                 if size < MIN_REQUIRED_SIZE:
-                    print("DEBUG: Skipping tiny drive: {}".format(
-                          device.path))
+                    logging.debug("Skipping tiny drive: %s", device.path)
                     continue
             except Exception as e:
-                print("Cannot probe device: {} {}".format(item, e))
+                logging.error("Cannot probe device: %s %s", item, e)
                 continue
             try:
                 disk = parted.Disk(device)
             except Exception as e:
-                print("Cannot probe disk: {} {}".format(item, e))
+                logging.error("Cannot probe disk: %s %s" ,item, e)
 
             # Get a system drive
             drive = self.dm.parse_system_disk(device, disk, self.mtab)
@@ -104,7 +102,7 @@ class DriveProber:
         have_windows = False
         efi_sps = []
         for drive in self.drives:
-            win = [x for x in drive.operating_systems.values()
+            win = [x for x in list(drive.operating_systems.values())
                    if x.otype == "windows"]
             if len(win) != 0:
                 have_windows = True
@@ -159,12 +157,12 @@ class SystemPartition(GObject.Object):
 
     def build_ntfs_space(self):
         """ Figure out ntfs minimum size """
-        cmd = "LANG=C ntfsresize -im --no-action {}".format(self.path)
+        cmd = f"LANG=C ntfsresize -im --no-action {self.path}"
 
         try:
-            o = subprocess.check_output(cmd, shell=True)
+            o = subprocess.check_output(cmd, shell=True, encoding='utf-8')
         except Exception as ex:
-            print("Cannot resize ntfs: {}".format(ex))
+            logging.error("Cannot resize ntfs: %s", ex)
             return
 
         for l in o.split("\n"):
@@ -172,19 +170,19 @@ class SystemPartition(GObject.Object):
                 continue
             if "MB" not in l:
                 continue
-            min_size = long(l.split(":")[-1].strip())
+            min_size = int(l.split(":")[-1].strip())
             self.min_size = min_size * 1000 * 1000
             self.resizable = True
             break
 
     def build_ext_space(self):
         """ Figure out ext* min size """
-        cmd = "LANG=C resize2fs -P {}".format(self.path)
+        cmd = f"LANG=C resize2fs -P {self.path}"
 
         try:
-            o = subprocess.check_output(cmd, shell=True)
+            o = subprocess.check_output(cmd, shell=True, encoding='utf-8')
         except Exception as ex:
-            print("Cannot resize ext4: {}".format(ex))
+            logging.error("Cannot resize ext4: %s", ex)
             return
 
         for l in o.split("\n"):
@@ -192,7 +190,7 @@ class SystemPartition(GObject.Object):
                 continue
             if "minimum size" not in l:
                 continue
-            min_size = long(l.split(":")[-1].strip())
+            min_size = int(l.split(":")[-1].strip())
             self.min_size = min_size * 4096 / 1024
 
             # Handle 1/2k blocks
@@ -221,7 +219,7 @@ class SystemPartition(GObject.Object):
             self.totalspace_string = format_size_local(self.totalspace)
             self.usedspace_string = format_size_local(self.usedspace)
         except Exception as e:
-            print("Failed to stat {}: {}".format(mount_point, e))
+            logging.error("Failed to stat %s: %s", mount_point, e)
 
         # Now work out if we're resizable.
         fs = partition.fileSystem
@@ -231,12 +229,12 @@ class SystemPartition(GObject.Object):
             try:
                 self.build_ntfs_space()
             except Exception as e:
-                print("Undefined error in ntfs: {}".format(e))
+                logging.error("Undefined error in ntfs: %s", e)
         elif fs.type in ["ext2", "ext", "ext3", "ext4"]:
             try:
                 self.build_ext_space()
             except Exception as e:
-                print("Undefined error in ext*: {}".format(e))
+                logging.error("Undefined error in ext*: %s", e)
 
 
 class SystemDrive:
@@ -398,7 +396,7 @@ class DiskManager:
                 elif pl_s == "32":
                     self.uefi_fw_size = 32
                 else:
-                    print("System reported odd FW size: {}".format(pl_s))
+                    logging.info("System reported odd FW size: %s", pl_s)
         else:
             self.is_uefi = False
         # Valid EFI types
@@ -443,7 +441,7 @@ class DiskManager:
         try:
             part_file = open("/proc/partitions")
         except Exception as ex:
-            print("Failed to scan parts: {}".format(ex))
+            logging.error("Failed to scan parts: %s", ex)
             return
 
         groups = [self.re_whole_disk,
@@ -468,7 +466,7 @@ class DiskManager:
         """ Push a newly discovered device into the list """
         fpath = "/dev/{}".format(str(device))
         if not os.path.exists(fpath):
-            print("Debug: Non-existent node: {}".format(fpath))
+            logging.debug("Non-existent node: %s", fpath)
             return
         fpath = os.path.realpath(fpath)
         if device not in self.devices:
@@ -537,7 +535,7 @@ class DiskManager:
         try:
             subprocess.check_call(mount_cmd, shell=True)
         except Exception as e:
-            print("Failed to mount {} to {}: {}".format(device, mpoint, e))
+            logging.error("Failed to mount %s to %s: %s", device, mpoint, e)
             return False
         return True
 
@@ -561,7 +559,7 @@ class DiskManager:
             subprocess.check_call(umount_cmd)
             return True
         except Exception as e:
-            print("Failed to unmount {}: {}".format(thing, e))
+            logging.error("Failed to unmount %s: %s", thing, e)
             return False
 
         # Finally umounted with lazy.
@@ -696,7 +694,7 @@ class DiskManager:
             mdir = tempfile.mkdtemp(suffix=suffix)
             return mdir
         except Exception as e:
-            print("Error constructing temp directory: {}".format(e))
+            logging.error("Cannot construct temp directory: %s", e)
             return None
 
     def detect_operating_system_and_space(self, device, mpoints):
@@ -721,7 +719,7 @@ class DiskManager:
                 try:
                     os.rmdir(mount_point)
                 except Exception as e:
-                    print("Failed to remove stagnant directory: {}".format(e))
+                    logging.error("Failed to remove stagnant directory: %s", e)
                 return (None, None)
             mounted = True
         else:
@@ -750,16 +748,15 @@ class DiskManager:
                 try:
                     os.rmdir(mount_point)
                 except Exception as e:
-                    print("Failed to remove stagnant directory: {}".format(e))
+                    logging.error("Failed to remove stagnant directory: %s", e)
             else:
-                print("Warning: {} {} still mount".format(path, mount_point))
+                logging.warning("%s %s still mount", path, mount_point)
         return (part, ret)
 
     def _read_line_complete(self, path):
         with open(path, "r") as inp:
             l = inp.readlines()[0].strip().replace("\r", "").replace("\n", "")
             return l
-        return None
 
     def get_disk_model(self, device):
         """ Get the model of the device """
@@ -810,7 +807,7 @@ class DiskManager:
 
         # i.e. /dev/sda, full write mount
         if device.path in blacklist:
-            print("DEBUG: Skipping boot disk")
+            logging.debug("Skipping boot disk")
             return None
 
         # Could be a disk without a label
@@ -818,7 +815,7 @@ class DiskManager:
             # i.e. /dev/sda1, partition mount
             for partition in disk.partitions:
                 if partition.path in blacklist:
-                    print("DEBUG: Skipping boot disk")
+                    logging.debug("Skipping boot disk")
                     return None
 
                 if not partition.fileSystem:

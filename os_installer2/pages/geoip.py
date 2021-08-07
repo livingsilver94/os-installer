@@ -1,9 +1,6 @@
-#!/bin/true
-# -*- coding: utf-8 -*-
-#
 #  This file is part of os-installer
 #
-#  Copyright 2013-2020 Solus <copyright@getsol.us>
+#  Copyright 2013-2021 Solus <copyright@getsol.us>.
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -11,12 +8,16 @@
 #  (at your option) any later version.
 #
 
-from .basepage import BasePage
-from gi.repository import GLib, Gtk
-import urllib2
+import logging
 import threading
-import re
+import urllib.error
+import urllib.parse
+import urllib.request
+
 import pygeoip
+from gi.repository import GLib, Gtk
+
+from .basepage import BasePage
 
 IP_CHECK = "https://getsol.us/location"
 TIMEOUT = 10
@@ -41,7 +42,7 @@ class InstallerGeoipPage(BasePage):
         self.spinner = Gtk.Spinner()
         hbox.pack_start(self.spinner, False, False, 10)
 
-        self.dlabel = Gtk.Label("<big>Finding your location" + u"…" + "</big>")
+        self.dlabel = Gtk.Label("<big>Finding your location…</big>")
         self.dlabel.set_use_markup(True)
         self.dlabel.set_halign(Gtk.Align.START)
         hbox.pack_start(self.dlabel, False, False, 10)
@@ -49,13 +50,13 @@ class InstallerGeoipPage(BasePage):
         hbox.set_halign(Gtk.Align.CENTER)
 
     def get_title(self):
-        return "Looking for your location" + u"…"
+        return "Looking for your location…"
 
     def get_name(self):
         return "geoip-lookup"
 
     def get_sidebar_title(self):
-        return u"↠" + " Find location"
+        return "↠" + " Find location"
 
     def get_icon_name(self, plasma=False):
         return "mark-location-symbolic"
@@ -107,13 +108,10 @@ class InstallerGeoipPage(BasePage):
     def get_ip_address(self):
         """ Get our external IP address for this machine """
         try:
-            o = urllib2.urlopen(IP_CHECK, None, TIMEOUT)
-            contents = o.read()
-            regex = r'Address: (\d+\.\d+\.\d+\.\d+)'
-            reg = re.compile(regex)
-            return reg.search(contents).group(1)
+            resp = urllib.request.urlopen(IP_CHECK, None, TIMEOUT)
+            return resp.read()[len("Address: "):].decode("utf-8")
         except Exception as e:
-            print(e)
+            logging.error("GeoIP: %s", e)
         return None
 
     def perform_lookup(self):

@@ -1,9 +1,6 @@
-#!/bin/true
-# -*- coding: utf-8 -*-
-#
 #  This file is part of os-installer
 #
-#  Copyright 2013-2020 Solus <copyright@getsol.us>
+#  Copyright 2013-2021 Solus <copyright@getsol.us>.
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -11,29 +8,20 @@
 #  (at your option) any later version.
 #
 
-import parted
-from .diskman import SystemPartition
-from .diskops import DummyPart
-from .diskops import DiskOpCreateDisk
-from .diskops import DiskOpCreateRoot
-from .diskops import DiskOpCreateSwap
-from .diskops import DiskOpCreateESP
-from .diskops import DiskOpFormatRoot
-from .diskops import DiskOpFormatRootLate
-from .diskops import DiskOpResizeOS
-from .diskops import DiskOpUseSwap
-from .diskops import DiskOpFormatSwap
-from .diskops import DiskOpFormatSwapLate
-from .diskops import DiskOpFormatHome
-from .diskops import DiskOpUseHome
-from .diskops import DiskOpCreateBoot
-from .diskops import DiskOpCreatePhysicalVolume
-from .diskops import DiskOpCreateLUKSPhysicalVolume
-from .diskops import DiskOpCreateLUKSContainer
-from .diskops import DiskOpCreateVolumeGroup
-from .diskops import DiskOpCreateLogicalVolume
-from . import MIN_REQUIRED_SIZE, MB, GB
+import logging
 
+import parted
+
+from . import GB, MB, MIN_REQUIRED_SIZE
+from .diskman import SystemPartition
+from .diskops import (DiskOpCreateBoot, DiskOpCreateDisk, DiskOpCreateESP,
+                      DiskOpCreateLogicalVolume, DiskOpCreateLUKSContainer,
+                      DiskOpCreateLUKSPhysicalVolume,
+                      DiskOpCreatePhysicalVolume, DiskOpCreateRoot,
+                      DiskOpCreateSwap, DiskOpCreateVolumeGroup,
+                      DiskOpFormatHome, DiskOpFormatRoot, DiskOpFormatRootLate,
+                      DiskOpFormatSwap, DiskOpFormatSwapLate, DiskOpResizeOS,
+                      DiskOpUseHome, DiskOpUseSwap, DummyPart)
 
 SWAP_USE_THRESHOLD = 15 * GB
 ESP_FREE_REQUIRED = 60 * MB
@@ -72,7 +60,7 @@ class DiskStrategy:
         return None
 
     def get_root_partition(self):
-        print("FATAL: Unimplemented strategy!!")
+        logging.critical("Unimplemented strategy!")
         return None
 
     def __init__(self, dp, drive):
@@ -529,7 +517,7 @@ class DualBootStrategy(DiskStrategy):
 
         for os_part in self.drive.operating_systems:
             if os_part not in self.drive.partitions:
-                print("Warning: missing os_part: {}".format(os_part))
+                logging.warning("Missing os_part: %s", os_part)
                 continue
             partition = self.drive.partitions[os_part]
             if not partition.resizable:
@@ -625,7 +613,7 @@ class ReplaceOSStrategy(DiskStrategy):
             if os.otype in ["windows", "windows-boot"]:
                 continue
             if os_part not in self.drive.partitions:
-                print("Warning: missing os_part: {}".format(os_part))
+                logging.warning("Missing os_part: %s", os_part)
                 continue
             partition = self.drive.partitions[os_part]
             if partition.size < MIN_REQUIRED_SIZE:
@@ -740,7 +728,7 @@ class UserPartitionStrategy(DiskStrategy):
         path = dev.path
         for drive in dp.drives:
             for part in drive.partitions:
-                print("{} vs {}".format(part, path))
+                logging.info("%s vs %s", part, path)
                 if part == path:
                     return drive.partitions[part].partition.fileSystem.type
 

@@ -1,9 +1,6 @@
-#!/bin/true
-# -*- coding: utf-8 -*-
-#
 #  This file is part of os-installer
 #
-#  Copyright 2013-2020 Solus <copyright@getsol.us>
+#  Copyright 2013-2021 Solus <copyright@getsol.us>.
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -11,18 +8,17 @@
 #  (at your option) any later version.
 #
 
-from .basepage import BasePage
-from os_installer2 import format_size_local, MIN_REQUIRED_SIZE
-from os_installer2.strategy import DualBootStrategy
-from os_installer2.strategy import ReplaceOSStrategy
-from os_installer2.strategy import EmptyDiskStrategy
-from os_installer2.strategy import WipeDiskStrategy
-from os_installer2.strategy import UserPartitionStrategy
-from os_installer2.diskman import SystemPartition
-from gi.repository import Gtk
-from gi.repository import GObject
+import logging
 import sys
 
+from gi.repository import GObject, Gtk
+from os_installer2 import MIN_REQUIRED_SIZE, format_size_local
+from os_installer2.diskman import SystemPartition
+from os_installer2.strategy import (DualBootStrategy, EmptyDiskStrategy,
+                                    ReplaceOSStrategy, UserPartitionStrategy,
+                                    WipeDiskStrategy)
+
+from .basepage import BasePage
 
 INDEX_PARTITION_PATH = 0
 INDEX_PARTITION_TYPE = 1
@@ -330,14 +326,14 @@ class ManualPage(Gtk.Box):
         prober = self.info.prober
 
         model = Gtk.ListStore(str, str, str, bool,
-                              str, str, str, GObject.GObject, long)
+                              str, str, str, GObject.GObject, int)
         self.treeview.set_model(model)
         for drive in prober.drives:
             for swap in drive.get_swap_partitions():
                 try:
                     self.push_swap(swap)
                 except Exception as e:
-                    print("Swap problem: {}".format(e))
+                    logging.error("Swap problem: %s", e)
 
             for part in sorted(drive.partitions):
                 try:
@@ -346,7 +342,7 @@ class ManualPage(Gtk.Box):
                         continue
                     self.push_partition(drive, part_prop)
                 except Exception as e:
-                    print("Init problem: {}".format(e))
+                    logging.error("Init problem: %s", e)
 
     def update_strategy(self, info):
         self.info = info
@@ -756,7 +752,7 @@ class InstallerPartitioningPage(BasePage):
 
         # Serious sanity stuffs
         if not info.strategy:
-            print("FATAL: No strategy")
+            logging.critical("No strategy")
             sys.exit(0)
 
         can_enc = [
@@ -779,5 +775,5 @@ class InstallerPartitioningPage(BasePage):
             self.info.owner.skip_page()
             return
         else:
-            print("FATAL: Unknown strategy type!")
+            logging.critical("Unknown strategy type!")
             sys.exit(0)

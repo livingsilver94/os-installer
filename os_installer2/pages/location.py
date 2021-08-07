@@ -1,9 +1,6 @@
-#!/bin/true
-# -*- coding: utf-8 -*-
-#
 #  This file is part of os-installer
 #
-#  Copyright 2013-2020 Solus <copyright@getsol.us>
+#  Copyright 2013-2021 Solus <copyright@getsol.us>.
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -11,8 +8,9 @@
 #  (at your option) any later version.
 #
 
-from .basepage import BasePage
 from gi.repository import Gtk
+
+from .basepage import BasePage
 
 
 class InstallerLocationPage(BasePage):

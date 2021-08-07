@@ -1,9 +1,6 @@
-#!/bin/true
-# -*- coding: utf-8 -*-
-#
 #  This file is part of os-installer
 #
-#  Copyright 2013-2020 Solus <copyright@getsol.us>
+#  Copyright 2013-2021 Solus <copyright@getsol.us>.
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -11,14 +8,18 @@
 #  (at your option) any later version.
 #
 
-import gi.repository
-import os
 import locale
-gi.require_version('Gtk', '3.0')
-gi.require_version('Gio', '2.0')
-gi.require_version('GnomeDesktop', '3.0')
-gi.require_version('TimezoneMap', '1.0')
+import os
 
+import gi.repository
+
+gi.require_versions({
+    'Gdk':  '3.0',
+    'Gio': '2.0',
+    'GnomeDesktop': '3.0',
+    'Gtk':  '3.0',
+    'TimezoneMap': '1.0',
+})
 
 # The path of the source filesystem
 SOURCE_FILESYSTEM = "/run/initramfs/live/LiveOS/squashfs.img"

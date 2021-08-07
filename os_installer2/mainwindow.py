@@ -1,34 +1,36 @@
-#!/bin/true
-# -*- coding: utf-8 -*-
-#
 #  This file is part of os-installer
 #
-#  Copyright 2013-2020 Solus <copyright@getsol.us>
+#  Copyright 2013-2021 Solus <copyright@getsol.us>.
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software Foundation, either version 2 of the License, or
 #  (at your option) any later version.
 #
-from gi.repository import Gtk, GLib, Gdk
-from .diskman import DiskManager
-from .permissions import PermissionsManager
-from .pages.language import InstallerLanguagePage
-from .pages.location import InstallerLocationPage
-from .pages.geoip import InstallerGeoipPage
-from .pages.keyboard import InstallerKeyboardPage
-from .pages.timezone import InstallerTimezonePage
-from .pages.disk_location import InstallerDiskLocationPage
-from .pages.partitioning import InstallerPartitioningPage
-from .pages.system import InstallerSystemPage
-from .pages.users import InstallerUsersPage
-from .pages.summary import InstallerSummaryPage
-from .pages.progress import InstallerProgressPage
-from .pages.complete import InstallationCompletePage
+
+import logging
+import os
 import sys
 import threading
 import traceback
-import os
+
+from gi.repository import GLib, Gtk
+
+from .diskman import DiskManager
+from .pages.complete import InstallationCompletePage
+from .pages.disk_location import InstallerDiskLocationPage
+from .pages.geoip import InstallerGeoipPage
+from .pages.keyboard import InstallerKeyboardPage
+from .pages.language import InstallerLanguagePage
+from .pages.location import InstallerLocationPage
+from .pages.partitioning import InstallerPartitioningPage
+from .pages.progress import InstallerProgressPage
+from .pages.summary import InstallerSummaryPage
+from .pages.system import InstallerSystemPage
+from .pages.timezone import InstallerTimezonePage
+from .pages.users import InstallerUsersPage
+from .permissions import PermissionsManager
+
 
 class FancyLabel(Gtk.Label):
 
@@ -249,7 +251,7 @@ class MainWindow(Gtk.ApplicationWindow):
             self.add_installer_page(InstallerProgressPage())
             self.add_installer_page(InstallationCompletePage())
         except Exception as e:
-            print("Fatal error during startup: {}".format(e))
+            logging.critical("Fatal error during startup: %s", e)
             traceback.print_exc(file=sys.stderr)
             sys.exit(1)
 
@@ -276,7 +278,7 @@ class MainWindow(Gtk.ApplicationWindow):
             try:
                 page.do_expensive_init()
             except Exception as e:
-                print("Fatal exception initialising: {}".format(e))
+                logging.critical("Fatal exception initialising: %s", e)
 
 
     def add_installer_page(self, page):

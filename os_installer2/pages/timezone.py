@@ -1,9 +1,6 @@
-#!/bin/true
-# -*- coding: utf-8 -*-
-#
 #  This file is part of os-installer
 #
-#  Copyright 2013-2020 Solus <copyright@getsol.us>
+#  Copyright 2013-2021 Solus <copyright@getsol.us>.
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -11,10 +8,10 @@
 #  (at your option) any later version.
 #
 
-from .basepage import BasePage
+from gi.repository import Gdk, Gtk, TimezoneMap
 from os_installer2.tz import Database
 
-from gi.repository import TimezoneMap, Gtk, Gdk
+from .basepage import BasePage
 
 
 class InstallerTimezonePage(BasePage):
@@ -40,7 +37,7 @@ class InstallerTimezonePage(BasePage):
         self.locations.set_property("margin-top", 10)
         self.pack_end(self.locations, False, False, 0)
 
-        self.locations.set_placeholder_text("Search for your timezone" + u"…")
+        self.locations.set_placeholder_text("Search for your timezone…")
 
         completion = TimezoneMap.TimezoneCompletion()
         completion.set_text_column(0)
